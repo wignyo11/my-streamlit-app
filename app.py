@@ -37,7 +37,7 @@ raw_penj, raw_pemb = load_data()
 
 # ========== SIDEBAR MENU DENGAN IKON & STYLING ==========
 with st.sidebar:
-    st.image("https://imgur.com/a/MyQpcot", width=100)
+    st.image("bg.png", width=100)
     st.markdown("# ☰ Menu Akuntansi")
     menu = option_menu(
         menu_title=None,
