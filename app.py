@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit as st 
 import pandas as pd
 from datetime import datetime
 from io import BytesIO
@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ========== FUNSI EXCEL MULTI‑SHEET ==========
+# ========== FUNGSI EXCEL MULTI-SHEET ==========
 def to_excel_multi(data_dict: dict[str, pd.DataFrame]) -> bytes:
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
@@ -37,7 +37,8 @@ raw_penj, raw_pemb = load_data()
 
 # ========== SIDEBAR MENU DENGAN IKON & STYLING ==========
 with st.sidebar:
-    st.markdown("☰ Menu Akuntansi")
+    st.image("https://imgur.com/a/MyQpcot", width=100)
+    st.markdown("# ☰ Menu Akuntansi")
     menu = option_menu(
         menu_title=None,
         options=["Dashboard", "Input Penjualan", "Input Pembelian", "Jurnal Umum", "Laba Rugi", "Neraca", "Reset Data"],
@@ -54,9 +55,14 @@ with st.sidebar:
 
 # ========== FUNGSI DASHBOARD ==========
 def show_dashboard(penj: pd.DataFrame, pemb: pd.DataFrame):
-    st.header("Ringkasan KPI Bulanan")
+    # Welcome message without HTML
+    st.subheader("Selamat Datang di Dashboard Keuangan Selada Pak Joko!")
+    st.write("---")
+
+    st.markdown("#### Ringkasan KPI Bulanan")
     bulan_ini = datetime.today().strftime("%Y-%m")
 
+    # Hitung data
     df_pn = (
         penj.groupby(penj['tanggal'].dt.strftime('%Y-%m'))
             .agg(total_penjualan=('total','sum'))
@@ -67,28 +73,34 @@ def show_dashboard(penj: pd.DataFrame, pemb: pd.DataFrame):
             .agg(jumlah_pembelian=('jumlah','sum'))
             .reset_index().rename(columns={'tanggal':'bulan'})
     )
-
-    df = (pd.merge(df_pn, df_pb, on='bulan', how='outer')
-            .fillna(0)
-            .assign(laba=lambda x: x.total_penjualan - x.jumlah_pembelian)
+    df = (
+        pd.merge(df_pn, df_pb, on='bulan', how='outer')
+          .fillna(0)
+          .assign(laba=lambda x: x.total_penjualan - x.jumlah_pembelian)
     )
 
     pend = int(df.loc[df['bulan']==bulan_ini, 'total_penjualan'].sum())
     beb  = int(df.loc[df['bulan']==bulan_ini, 'jumlah_pembelian'].sum())
 
+    # Tampilkan KPI dengan kolom dan emoji
     c1, c2, c3 = st.columns(3)
-    c1.metric("Total Pendapatan", f"Rp {pend:,.0f}")
-    c2.metric("Total Beban",     f"Rp {beb:,.0f}")
-    c3.metric("Laba Bersih",     f"Rp {pend-beb:,.0f}")
+    c1.metric("💰 Total Pendapatan", f"Rp {pend:,.0f}")
+    c2.metric("📉 Total Beban",     f"Rp {beb:,.0f}")
+    c3.metric("💹 Laba Bersih",     f"Rp {pend-beb:,.0f}")
 
-    fig = px.line(
-        df,
-        x='bulan',
-        y=['total_penjualan','jumlah_pembelian','laba'],
-        labels={'value':'Jumlah (Rp)','bulan':'Bulan'},
-        title='Tren Keuangan Bulanan'
-    )
-    st.plotly_chart(fig, use_container_width=True)
+    # Tampilkan tren di dalam expander
+    with st.expander("📈 Lihat Tren Keuangan Bulanan"):
+        fig = px.line(
+            df,
+            x='bulan',
+            y=['total_penjualan','jumlah_pembelian','laba'],
+            labels={'value':'Jumlah (Rp)','variable':'Kategori','bulan':'Bulan'}
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    # Sedikit animasi perayaan jika profit positif
+    if pend - beb > 0:
+        st.balloons()
 
 # ========== ROUTING MENU ==========
 if menu == "Dashboard":
@@ -98,9 +110,9 @@ elif menu == "Input Penjualan":
     st.header("Input Penjualan Selada")
     tgl = st.date_input("Tanggal", datetime.today())
     kg  = st.number_input("Jumlah (kg)", 0.0, step=0.1)
-    if st.button("Simpan Penjualan"):
+    if st.button("💾 Simpan Penjualan"):
         simpan_penjualan(tgl.strftime("%Y-%m-%d"), kg, kg * 32000)
-        st.success("Penjualan disimpan!")
+        st.success("✅ Penjualan disimpan!")
         raw_penj, raw_pemb = load_data()
 
 elif menu == "Input Pembelian":
@@ -109,9 +121,9 @@ elif menu == "Input Pembelian":
     ket = st.selectbox("Kategori Beban", ["Air","Listrik","Bibit","Plastik","Lainnya"])
     biaya = st.number_input("Jumlah (Rp)", 0, step=1_000, format="%d")
     st.markdown(f"**Nominal:** Rp {biaya:,.0f}")
-    if st.button("Simpan Pembelian"):
+    if st.button("💾 Simpan Pembelian"):
         simpan_pembelian(tgl.strftime("%Y-%m-%d"), ket.lower(), biaya)
-        st.success(f"Pembelian {ket} disimpan: Rp {biaya:,.0f}")
+        st.success(f"✅ Pembelian {ket} disimpan: Rp {biaya:,.0f}")
         raw_penj, raw_pemb = load_data()
 
 elif menu == "Jurnal Umum":
@@ -148,14 +160,14 @@ elif menu == "Jurnal Umum":
     })
 
     st.download_button(
-        "Download Semua Laporan (Excel)",
+        "⬇️ Download Semua Laporan (Excel)",
         data=to_excel_multi({
             "Jurnal Umum": df_j,
             "Laba Rugi":   df_lr,
             "Neraca":      df_nr
         }),
         file_name="laporan_selada_pak_joko.xlsx",
-        mime="application/vnd.openxmlformats-officedocument-spreadsheetml.sheet"
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
 elif menu == "Laba Rugi":
@@ -168,7 +180,7 @@ elif menu == "Laba Rugi":
     })
     st.dataframe(df_lr.style.format({"Total (Rp)": "{:,.0f}"}), use_container_width=True)
     st.download_button(
-        "Download Laporan Laba Rugi (Excel)",
+        "⬇️ Download Laporan Laba Rugi (Excel)",
         data=to_excel_multi({"Laba Rugi": df_lr}),
         file_name="laporan_laba_rugi.xlsx",
         mime="application/vnd.openxmlformats-officedocument-spreadsheetml.sheet"
@@ -190,15 +202,15 @@ elif menu == "Neraca":
         }), use_container_width=True
     )
     st.download_button(
-        "Download Neraca (Excel)",
+        "⬇️ Download Neraca (Excel)",
         data=to_excel_multi({"Neraca": df_nr}),
         file_name="neraca.xlsx",
-        mime="application/vnd.openxmlformats-officedocument-spreadsheetml.sheet"
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
 elif menu == "Reset Data":
     st.header("⚠️ Reset Data")
     if st.button("Hapus Semua Transaksi"):
         reset_data()
-        st.success("Data berhasil di-reset!")
+        st.success("✅ Data berhasil di-reset!")
         raw_penj, raw_pemb = load_data()
